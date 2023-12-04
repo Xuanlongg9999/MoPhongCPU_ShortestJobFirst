@@ -20,37 +20,41 @@ class CPUSchedulingSimulation extends Component {
     this.runTimeout = null;
   }
 
-  handleRunSimulation = async () => {
-    const { processes, currentTime, completedProcesses, isSimulated, isPaused } = this.state;
+ // Hàm để chọn tiến trình tiếp theo dựa trên arrival time và CPU burst time
+selectNextProcess = (availableProcesses, currentTime, currentProcess) => {
+  const eligibleProcesses = availableProcesses.filter(process => process.arrivalTime <= currentTime);
   
-    if (processes.length === 0) {
-      alert('Danh sách tiến trình trống!');
-      return;
-    }
-  
-    const availableProcesses = processes.filter(process => process.time > 0);
-    
-    if (availableProcesses.length === 0) {
-      alert('Hết tiến trình');
-      return;
-    }
-  
-    availableProcesses.sort((a, b) => {
-      const waitingTimeA = a.arrivalTime - currentTime;
-      const waitingTimeB = b.arrivalTime - currentTime;
-  
-      if (waitingTimeA === waitingTimeB) {
-        return a.time - b.time; // Sắp xếp theo CPU burst time nếu thời gian chờ đợi bằng nhau
-      }
-  
-      return waitingTimeA - waitingTimeB;
+  if (eligibleProcesses.length === 0) {
+    return null; // Không có tiến trình nào khả dụng
+  }
+
+  if (currentProcess && currentProcess.time > 0) {
+    return currentProcess;  
+  }
+
+  eligibleProcesses.sort((a, b) => {
+    return a.time - b.time; // Sắp xếp theo CPU burst time
+  });
+  return eligibleProcesses[0];
+};
+
+executeNextProcess = async () => {
+  const { processes, currentTime, completedProcesses, isPaused } = this.state;
+  let availableProcesses = processes.filter(process => process.time > 0);
+
+  if (availableProcesses.length === 0) {
+    this.setState({
+      isRunning: false,
     });
-  
-    const nextProcess = availableProcesses[0];
+    return;
+  }
+  const nextProcess = this.selectNextProcess(availableProcesses, currentTime, this.state.currentProcess);
+
+  if (nextProcess) {
     const remainingProcesses = processes.map(process =>
       process.id === nextProcess.id ? { ...process, time: process.time - 1 } : process
     );
-  
+
     this.setState({
       processes: remainingProcesses,
       currentTime: currentTime + 1,
@@ -59,23 +63,48 @@ class CPUSchedulingSimulation extends Component {
         { id: nextProcess.id, startTime: currentTime, endTime: currentTime + 1 },
       ],
       isRunning: true,
-    });
-  
+      currentProcess: { ...nextProcess, time: nextProcess.time - 1 },
+    })
+    await this.sleep(500);
+    ;
+
     if (remainingProcesses.every(process => process.time === 0)) {
-      await this.sleep(400);
+      await this.sleep(500);
       this.setState({
         isRunning: false,
         isSimulated: true,
       });
     } else if (!isPaused) {
-      this.runTimeout = setTimeout(this.handleRunSimulation, 400);
+      setTimeout(this.executeNextProcess, 500);
     } else {
       this.setState({
         isRunning: false,
       });
     }
-  };
+  } else {
+    // Không có tiến trình nào khả dụng, kết thúc mô phỏng
+    this.setState({
+      isRunning: false,
+      isSimulated: true,
+    });
+  }
   
+  // Gọi lại hàm để chọn tiến trình tiếp theo sau khi một tiến trình kết thúc
+  if (!this.state.isPaused) {
+    setTimeout(this.executeNextProcess, 1500);
+  }
+};
+
+handleRunSimulation = () => {
+  const { processes } = this.state;
+
+  if (processes.length === 0) {
+    alert('Danh sách tiến trình trống!');
+    return;
+  }
+  this.executeNextProcess();
+};
+
 
   handleStop = () => {
     this.clearRunTimeout();
@@ -84,10 +113,10 @@ class CPUSchedulingSimulation extends Component {
       isPaused: false,
     });
   };
-  
+
   handleContinue = () => {
-    this.setState({ 
-      isPaused: false, 
+    this.setState({
+      isPaused: false,
       isRunning: true,
     }, () => {
       if (this.state.isSimulated) {
@@ -95,8 +124,8 @@ class CPUSchedulingSimulation extends Component {
       }
     });
   };
-  
-  
+
+
 
   sleep = ms => {
     return new Promise(resolve => setTimeout(resolve, ms));
