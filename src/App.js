@@ -20,50 +20,6 @@ class CPUSchedulingSimulation extends Component {
     this.runTimeout = null;
   }
 
-  // handleRunSimulation = () => {
-  //   const { processes, currentTime, completedProcesses } = this.state;
-  
-  //   if (processes.length === 0) {
-  //     alert('Danh sách tiến trình trống!');
-  //     return;
-  //   }
-  
-  //   const availableProcesses = processes.filter(process => process.time > 0);
-  
-  //   if (availableProcesses.length === 0) {
-  //     alert('Hết tiến trình');
-  //     return;
-  //   }
-  
-  //   // Sắp xếp các tiến trình theo thời gian chờ đợi (thời gian đến - thời gian đã chạy)
-  //   availableProcesses.sort((a, b) => {
-  //     const waitingTimeA = a.arrivalTime - currentTime;
-  //     const waitingTimeB = b.arrivalTime - currentTime;
-  
-  //     if (waitingTimeA === waitingTimeB) {
-  //       return a.time - b.time; // Nếu thời gian chờ đợi bằng nhau, sắp xếp theo CPU burst time
-  //     }
-  
-  //     return waitingTimeA - waitingTimeB;
-  //   });
-  
-  //   const nextProcess = availableProcesses[0];
-  //   const remainingProcesses = processes.map(process =>
-  //     process.id === nextProcess.id ? { ...process, time: process.time - 1 } : process
-  //   );
-  
-  //   this.setState({
-  //     processes: remainingProcesses,
-  //     currentTime: currentTime + 1,
-  //     completedProcesses: [
-  //       ...completedProcesses,
-  //       { id: nextProcess.id, startTime: currentTime, endTime: currentTime + 1 },
-  //     ],
-  //   });
-  
-  //   setTimeout(this.handleRunSimulation, 400);
-  // };
-  
   handleRunSimulation = async () => {
     const { processes, currentTime, completedProcesses, isSimulated, isPaused } = this.state;
   
@@ -73,19 +29,18 @@ class CPUSchedulingSimulation extends Component {
     }
   
     const availableProcesses = processes.filter(process => process.time > 0);
-  
+    
     if (availableProcesses.length === 0) {
       alert('Hết tiến trình');
       return;
     }
   
-    // Sắp xếp các tiến trình theo thời gian chờ đợi (thời gian đến - thời gian đã chạy)
     availableProcesses.sort((a, b) => {
       const waitingTimeA = a.arrivalTime - currentTime;
       const waitingTimeB = b.arrivalTime - currentTime;
   
       if (waitingTimeA === waitingTimeB) {
-        return a.time - b.time; // Nếu thời gian chờ đợi bằng nhau, sắp xếp theo CPU burst time
+        return a.time - b.time; // Sắp xếp theo CPU burst time nếu thời gian chờ đợi bằng nhau
       }
   
       return waitingTimeA - waitingTimeB;
@@ -103,26 +58,30 @@ class CPUSchedulingSimulation extends Component {
         ...completedProcesses,
         { id: nextProcess.id, startTime: currentTime, endTime: currentTime + 1 },
       ],
-      isRunning: true, // Set isRunning to true when the simulation is running
+      isRunning: true,
     });
   
     if (remainingProcesses.every(process => process.time === 0)) {
-      // Nếu tất cả tiến trình đã chạy xong, cập nhật trạng thái sau khi mô phỏng
-      await this.sleep(400); // Chờ 400ms để thấy trạng thái cuối cùng trước khi cập nhật nút
+      await this.sleep(400);
       this.setState({
         isRunning: false,
         isSimulated: true,
       });
-    } else {
-      // Nếu vẫn còn tiến trình chưa chạy xong, tiếp tục mô phỏng
+    } else if (!isPaused) {
       this.runTimeout = setTimeout(this.handleRunSimulation, 400);
+    } else {
+      this.setState({
+        isRunning: false,
+      });
     }
   };
   
+
   handleStop = () => {
     this.clearRunTimeout();
     this.setState({
       isRunning: false,
+      isPaused: false,
     });
   };
   
@@ -130,8 +89,13 @@ class CPUSchedulingSimulation extends Component {
     this.setState({ 
       isPaused: false, 
       isRunning: true,
+    }, () => {
+      if (this.state.isSimulated) {
+        this.handleRunSimulation();
+      }
     });
   };
+  
   
 
   sleep = ms => {
