@@ -54,7 +54,6 @@ executeNextProcess = async () => {
     const remainingProcesses = processes.map(process =>
       process.id === nextProcess.id ? { ...process, time: process.time - 1 } : process
     );
-
     this.setState({
       processes: remainingProcesses,
       currentTime: currentTime + 1,
@@ -75,7 +74,7 @@ executeNextProcess = async () => {
         isSimulated: true,
       });
     } else if (!isPaused) {
-      setTimeout(this.executeNextProcess, 500);
+      setTimeout(this.executeNextProcess, 0);
     } else {
       this.setState({
         isRunning: false,
@@ -106,25 +105,38 @@ handleRunSimulation = () => {
 };
 
 
+  // handleStop = () => {
+  //   this.clearRunTimeout();
+  //   this.setState({
+  //     isRunning: false,
+  //     isPaused: true,
+  //   });
+  // };
+
   handleStop = () => {
     this.clearRunTimeout();
     this.setState({
       isRunning: false,
-      isPaused: false,
+      isPaused: true,
     });
   };
+  
+
+  // handleContinue = () => {
+  //   this.setState({
+  //     isPaused: false,
+  //     isRunning: true,
+  //   });
+  // };
 
   handleContinue = () => {
     this.setState({
       isPaused: false,
       isRunning: true,
-    }, () => {
-      if (this.state.isSimulated) {
-        this.handleRunSimulation();
-      }
     });
+    this.executeNextProcess(); // Resume the execution
   };
-
+  
 
 
   sleep = ms => {
@@ -157,7 +169,7 @@ handleRunSimulation = () => {
         return;
       }
 
-      // Update state with the new process
+      // cập nhật state
       this.setState(prevState => ({
         processes: [...prevState.processes, { id, name, time, arrivalTime }],
         initialProcesses: [...prevState.initialProcesses, { id, name, time, arrivalTime }],
@@ -229,16 +241,6 @@ handleRunSimulation = () => {
     });
   };
 
-  // handleStop = () => {
-  //   this.clearRunTimeout();
-  // };
-
-  // handleContinue = () => {
-  //   this.setState({ isPaused: false }, () => {
-  //     this.runStep();
-  //   });
-  // };
-
   clearRunTimeout = () => {
     if (this.runTimeout) {
       clearTimeout(this.runTimeout);
@@ -308,7 +310,7 @@ handleRunSimulation = () => {
             <button onClick={this.handleStop} disabled={!isRunning || isPaused}>
               Stop
             </button>
-            <button onClick={this.handleContinue} disabled={!isPaused || isSimulated}>
+            <button onClick={this.handleContinue} disabled={!isPaused || isRunning}>
               Continue
             </button>
           </div>
