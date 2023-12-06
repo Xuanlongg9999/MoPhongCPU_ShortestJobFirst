@@ -39,7 +39,13 @@ selectNextProcess = (availableProcesses, currentTime, currentProcess) => {
 };
 
 executeNextProcess = async () => {
-  const { processes, currentTime, completedProcesses, isPaused } = this.state;
+  const { processes, currentTime, completedProcesses, isPaused, shouldStopSimulation } = this.state;
+  if (shouldStopSimulation) {
+    this.setState({
+      isRunning: false,
+    });
+    return;
+  }
   let availableProcesses = processes.filter(process => process.time > 0);
 
   if (availableProcesses.length === 0) {
@@ -73,7 +79,7 @@ executeNextProcess = async () => {
         isRunning: false,
         isSimulated: true,
       });
-    } else if (!isPaused) {
+    } else if (!isPaused && !shouldStopSimulation) {
       setTimeout(this.executeNextProcess, 0);
     } else {
       this.setState({
@@ -89,7 +95,7 @@ executeNextProcess = async () => {
   }
   
   // Gọi lại hàm để chọn tiến trình tiếp theo sau khi một tiến trình kết thúc
-  if (!this.state.isPaused) {
+  if (!this.state.isPaused && !shouldStopSimulation) {
     setTimeout(this.executeNextProcess, 1500);
   }
 };
@@ -101,36 +107,24 @@ handleRunSimulation = () => {
     alert('Danh sách tiến trình trống!');
     return;
   }
+  this.setState({
+    shouldStopSimulation: false,
+  });
   this.executeNextProcess();
 };
-
-
-  // handleStop = () => {
-  //   this.clearRunTimeout();
-  //   this.setState({
-  //     isRunning: false,
-  //     isPaused: true,
-  //   });
-  // };
 
   handleStop = () => {
     this.clearRunTimeout();
     this.setState({
       isRunning: false,
       isPaused: true,
+      shouldStopSimulation: true,
     });
   };
   
-
-  // handleContinue = () => {
-  //   this.setState({
-  //     isPaused: false,
-  //     isRunning: true,
-  //   });
-  // };
-
   handleContinue = () => {
     this.setState({
+      shouldStopSimulation: false,
       isPaused: false,
       isRunning: true,
     });
@@ -258,7 +252,7 @@ handleRunSimulation = () => {
       <div className="cpu-scheduling-simulation">
         <br />
         <h2>Nguyên lý hệ điều hành</h2>
-        <h2>Bài tập lớn: Mô phỏng giải thuật lập lịch CPU SRTF (Shortest Remaining Time First)</h2>
+        <h2>Bài tập lớn: Mô phỏng giải thuật lập lịch CPU SJF (Shortest Job First)</h2>
         <div className="process-list">
           <h2>Process List</h2>
           <table>
